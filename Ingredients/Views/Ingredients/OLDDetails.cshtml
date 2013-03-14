@@ -1,0 +1,38 @@
+﻿
+
+@model Food.Models.Products.Ingredients
+
+@{
+
+    Layout = null;
+
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>Details</title>
+</head>
+<body>
+    <fieldset>
+        <legend>Ingredients</legend>
+    
+        <div class="display-label">Ingredient_pk</div>
+        <div class="display-field">@Model.Ingredient_pk</div>
+    
+        <div class="display-label">CommonName</div>
+        <div class="display-field">@Model.CommonName</div>
+    
+        <div class="display-label">Type_fk</div>
+        <div class="display-field">@Model.Type_fk
+       
+        </div>
+    </fieldset>
+    <p>
+        @Html.ActionLink("Edit", "Edit", new { /* id=Model.PrimaryKey */ }) |
+        @Html.ActionLink("Back to List", "Index")
+    </p>
+</body>
+</html>
+

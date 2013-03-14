@@ -1,0 +1,10 @@
+﻿@{
+    ViewBag.Title = "Default";
+    var name = (Model.GetType().GetProperty("name")).GetValue(Model, null); 
+    var op = (Model.GetType().GetProperty("operation")).GetValue(Model, null);
+}
+
+<h2>Default</h2>
+<h3>name: @name </h3>
+<h3>operation: @op</h3>
+

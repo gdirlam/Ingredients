@@ -1,0 +1,86 @@
+﻿@model IEnumerable<Food.Models.Products.Ingredients>
+@using AppAMatic.Helper;
+@using Food.Models.Products;
+@using System.Linq;
+@{
+    Layout = null;
+    List<Types> types = (new Types()).GetInParallel<Types>();
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Index</title>
+</head>
+<body>
+    <p>
+        @Html.ActionLink("Create New", "Create")
+    </p>
+    <table>
+        <tr>
+            <th></th>
+            <th>Ingredient_pk </th>
+            <th>CommonName </th>
+            <th>Type_fk </th>
+        </tr>
+        @foreach (var item in Model) {
+            <tr>
+                <td>
+                    @Html.ActionLink("Edit", "Edit", new { id = item.Ingredient_pk }) | @*      @Html.ActionLink("Details", "Details", new {  id=item.Ingredient_pk  }) | *@
+                    @Html.ActionLink("Delete", "Delete", new { id = item.Ingredient_pk })
+                </td>
+                <td>
+                    @item.Ingredient_pk
+                </td>
+                <td>
+                    @item.CommonName
+                </td>
+                <td>
+                    @{
+               var type = types.FirstOrDefault<Types>(t => t.Type_pk == item.Type_fk);
+                    }
+                    @type.Classification
+                </td>
+            </tr>
+        }
+    </table>
+    <style>
+        .container{  
+            display: none; 
+            position: absolute; 
+            width: 500px; 
+            height: 400px;  }    
+        .rotate {
+            color: #FFFFFF;
+            text-align: center;
+            top: 90px; 
+            left: 46px; 
+            position:absolute; 
+            font-family: Arial; 
+            font-size: 20pt; 
+            -webkit-transform: rotate(-20deg);
+            -moz-transform: rotate(-40deg);
+            transform: rotate(-40deg);
+        }
+        .rotate span{
+        font-size: 28pt; 
+        }
+    </style>
+    <div class="container">
+
+
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" style="position: absolute">
+<g id="layer1" style="pointer-events:inherit">
+<path id="path2182"
+fill="#999999" fill-rule="evenodd" stroke="#666666" stroke-width="14" stroke-linejoin="round"
+ d="
+M303.4284973144531,298.8102111816406 L299.42071533203125,328.7746276855469 L268.1227722167969,319.680908203125 L256.139404296875,347.78717041015625 L228.283447265625,331.8197021484375 L209.0774688720703,356.3017272949219 L186.4137725830078,334.4640808105469 L161.19192504882812,353.78363037109375 L145.1445770263672,327.4476318359375 L115.49165344238281,340.39093017578125 L107.06891632080078,311.2115478515625 L74.84812927246094,316.9650573730469 L74.57925415039062,286.77569580078125 L41.815147399902344,284.97808837890625 L49.71705627441406,255.6757049560547 L18.468311309814453,246.43983459472656 L34.044464111328125,219.86557006835938 L6.274572372436523,203.77178955078125 L28.5462646484375,181.59539794921875 L6.000110149383545,159.65492248535156 L33.56793212890625,143.26988220214844 L17.66216468811035,116.86133575439453 L48.79393768310547,107.29713439941406 L40.52797317504883,78.07984161376953 L73.26758575439453,75.93741607666016 L73.1607894897461,45.74723434448242 L105.45105743408203,51.161224365234375 L113.51017761230469,21.895097732543945 L143.32220458984375,34.52531433105469 L159.0408477783203,8.02215576171875 L184.50143432617188,27.074993133544922 L206.8918914794922,5.000080108642578 L226.40126037597656,29.278392791748047 L254.05674743652344,13.018757820129395 L266.38897705078125,40.99705123901367 L297.5717468261719,31.574377059936523 L301.95208740234375,61.494651794433594 L334.7027893066406,59.50096893310547 L330.85589599609375,89.48324584960938 L363.11669921875,95.04385375976562 L351.2843933105469,123.20420837402344 L381.0282897949219,135.96971130371094 L361.9539794921875,160.53875732421875 L387.31195068359375,179.70701599121094 L362.1941223144531,199.1409912109375 L381.5728454589844,223.5076141357422 L351.9897766113281,236.5854034423828 L364.17169189453125,264.619384765625 L331.9821472167969,270.5191955566406 L336.2018737792969,300.4590148925781 L303.4284973144531,298.8102111816406 z "
+  ></path></g>
+
+
+
+</svg>
+
+    <div class="rotate">now with <br />extra-strength<br /><span>sproc-a-mator</span></div>
+</div>
+</body>
+</html>

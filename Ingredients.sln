@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Food", "Ingredients\Food.csproj", "{2185D774-B97A-499C-AF3B-C709B7B213B9}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{C5D8AC43-319C-4F0E-BBB0-70F340A69260}"
+	ProjectSection(SolutionItems) = preProject
+		Ingredients.vsmdi = Ingredients.vsmdi
+		Local.testsettings = Local.testsettings
+		TraceAndTestImpact.testsettings = TraceAndTestImpact.testsettings
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IngredientsTest", "IngredientsTest\IngredientsTest.csproj", "{C223CD59-A9CA-4138-A4DF-320211DD0244}"
+EndProject
+Global
+	GlobalSection(TestCaseManagementSettings) = postSolution
+		CategoryFile = Ingredients.vsmdi
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2185D774-B97A-499C-AF3B-C709B7B213B9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2185D774-B97A-499C-AF3B-C709B7B213B9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2185D774-B97A-499C-AF3B-C709B7B213B9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2185D774-B97A-499C-AF3B-C709B7B213B9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C223CD59-A9CA-4138-A4DF-320211DD0244}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C223CD59-A9CA-4138-A4DF-320211DD0244}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C223CD59-A9CA-4138-A4DF-320211DD0244}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C223CD59-A9CA-4138-A4DF-320211DD0244}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

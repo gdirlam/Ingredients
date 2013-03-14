@@ -1,0 +1,36 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title></title>
+    <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+<script src="http://code.jquery.com/jquery-migrate-1.1.1.min.js"></script>
+    <script>
+        $(function () {
+            $.ajax({
+                url: 'Data/Products/Ingredients'
+                , contentType: 'application/json'
+                , dataType: 'json'
+                , type: 'OPTIONS'
+                /*, data: "{ \
+                    'Ingredient_pk': '' \
+                    , 'CommonName': 'Chicken' \
+                    , 'Details': 'A savory white meat from a domesticated version of the Jungle Guinea Fowl' \
+                    , 'MediaURL': '' \
+                    , 'Type_fk': '12' \
+                }"*/
+                , success: function (result) {
+                    //alert();
+                    console.log(result);
+                }
+            });
+        })
+</script>
+</head>    
+
+<body>
+<ul>
+<li><h2>Tests</h2></li>
+<li></li>
+</ul>
+</body>
+</html>

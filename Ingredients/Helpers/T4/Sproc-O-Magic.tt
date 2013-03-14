@@ -1,0 +1,387 @@
+﻿<#@ template language="C#" #>
+<#@ output extension="SQL" #>
+<#@ assembly name="System.Xml" #>
+<#@ assembly name="Microsoft.SqlServer.ConnectionInfo, Version=10.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91" #>
+<#@ assembly name="Microsoft.SqlServer.Smo, Version=10.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91" #>
+<#@ assembly name="Microsoft.SqlServer.Management.Sdk.sfc, Version=10.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91" #>
+<#@ import namespace="Microsoft.SqlServer.Management.Smo" #>
+<#@ import namespace="Microsoft.SqlServer.Management.Common" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#
+/*
+		ToDo: Inserts should know if the SQLDDL column is nullable, and choose the nullable state accordingly.
+		-- This could have ramifications with update...? but most likely not.
+
+		Delete bit is curious. 
+*/
+#>
+<#
+	Microsoft.SqlServer.Management.Smo.Server Srv = new Microsoft.SqlServer.Management.Smo.Server("(local)");
+	//Microsoft.SqlServer.Management.Smo.Server Srv = new Microsoft.SqlServer.Management.Smo.Server("local");
+    Microsoft.SqlServer.Management.Smo.Database db = new Microsoft.SqlServer.Management.Smo.Database( Srv, "Food");
+
+	
+	
+
+        //List<string> TableNames =  new List<string>{ "Pairings", "Ingredients", "Proximity", "Types" }; //, "Type" , "Item" 
+        //  "Alert", "trnAppointment", "ShowInfo", "Property_MLS", "ShowInfoSub", "Status", "UserType", "Token" 
+        db.Refresh();
+        foreach (Microsoft.SqlServer.Management.Smo.Table table in db.Tables) {
+        //if( table.Name == "sysdiagrams" || (! TableNames.Contains(table.Name) ) ){
+	    if( table.Name == "sysdiagrams" || table.Name == "PaymentMethod" || table.Name.IndexOf("aspnet_") >= 0 ){
+			continue; 
+		}
+        //if( table.Name == "sysdiagrams" ){
+		//	continue; 
+        //}
+        table.Refresh();
+	    Sproc.ProcedureType procType = Sproc.ProcedureType.Get; 
+#> 
+
+<#
+
+//List<Sproc.ProcedureType> SprocTypes =  new List<Sproc.ProcedureType>{ Sproc.ProcedureType.Update};
+List<Sproc.ProcedureType> SprocTypes =  new List<Sproc.ProcedureType>{ Sproc.ProcedureType.Get, Sproc.ProcedureType.Create, Sproc.ProcedureType.Update, Sproc.ProcedureType.Delete}; 
+        foreach (Sproc.ProcedureType SprocType in SprocTypes ) {
+					string ProcName = ""; 
+#>
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+<#
+			switch(SprocType){
+				case Sproc.ProcedureType.Get:
+#>
+<#=Sproc.MakeDropHeader(table, SprocType, ref ProcName) #>
+<#=Sproc.MakeHeader(table, SprocType, ref ProcName) #>
+<#=Sproc.MakeSelect(table, ProcName)#>
+<#
+					break;
+				case Sproc.ProcedureType.Create:
+#>
+<#=Sproc.MakeDropHeader(table, SprocType, ref ProcName) #>
+<#=Sproc.MakeHeader(table, SprocType, ref ProcName) #>
+<#=Sproc.MakeInsert(table, ProcName)#>
+<#
+					break;
+				case Sproc.ProcedureType.Update:
+#>
+<#=Sproc.MakeDropHeader(table, SprocType, ref ProcName) #>
+<#=Sproc.MakeHeader(table, SprocType, ref ProcName) #>
+<#=Sproc.MakeUpdate(table, ProcName)#>
+<#
+					break;
+				case Sproc.ProcedureType.Delete:
+#>
+<#=Sproc.MakeDropHeader(table, SprocType, ref ProcName) #>
+<#=Sproc.MakeHeader(table, SprocType, ref ProcName) #>
+<#=Sproc.MakeDelete(table, ProcName)#>
+<#
+					break;			}
+#>
+GO
+
+SET ANSI_NULLS OFF
+GO
+SET QUOTED_IDENTIFIER OFF
+GO
+
+<#
+		}
+#>
+
+<#
+        }
+#> 
+<#+   // Start of class feature block
+public static class Sproc{
+    private static string r = "\r\n";  //Carriage Return Line Feed...
+    private static string t = "\t";  //tab...
+    private static string PrimaryKeyColName ;
+
+    public static string MakeDropHeader(Microsoft.SqlServer.Management.Smo.Table tbl, ProcedureType proType, ref string ProcName ){
+		ProcName = string.Format( "{0}.{1}{2}", tbl.Schema.ToString(), tbl.Name, proType.ToString() );
+        string retVal = string.Format("IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'{0}') AND type in (N'P', N'PC')) {1}", ProcName, r);
+        retVal += string.Format("{1}DROP PROCEDURE {0} {2}", ProcName,t, r);
+		retVal += string.Format("GO {0}", r);
+		return retVal;
+	}
+    
+    public static string MakeHeader(Microsoft.SqlServer.Management.Smo.Table tbl, ProcedureType proType, ref string ProcName ){
+
+		PrimaryKeyColName = ""; 
+		ProcName = string.Format( "{0}.{1}{2}", tbl.Schema.ToString(), tbl.Name, proType.ToString() );
+        string retVal = string.Format("CREATE PROCEDURE {0} ( {1}", ProcName, r);
+        string comma = string.Empty;
+        string Nullable = string.Empty;
+        //if (proType == ProcedureType.Get || proType == ProcedureType.Set || proType == ProcedureType.Update ) { //this line is just sillyness, why no create???
+            Nullable = " = NULL ";
+        //}
+        foreach (Microsoft.SqlServer.Management.Smo.Column column in tbl.Columns) {
+			if( column.DataType.ToString() != "image" && column.DataType.ToString() != "ntext" ){
+				if (column.InPrimaryKey) {
+					PrimaryKeyColName = column.Name;
+					retVal += string.Format("{0}{1}@{2} AS {3} {4} OUTPUT {5}", t, comma, column.Name, FormatDataType(column), Nullable, r);
+				}
+				else {
+					if(proType != ProcedureType.Delete ){
+						retVal += string.Format("{0}{1}@{2} AS {3} {4} {5}", t, comma, column.Name, FormatDataType(column), Nullable, r);
+					}
+				}
+				comma = ", ";
+            }
+        }
+        if (proType == ProcedureType.Set || proType == ProcedureType.Delete ) {
+            retVal += string.Format("{0}{1}	@delete AS BIT = NULL ", t, comma,  r);
+        }
+        retVal += string.Format(") AS {0}", r);
+        return retVal;
+
+}
+
+    public static string MakeSelect(Microsoft.SqlServer.Management.Smo.Table tbl, string ProcName ) {
+
+    
+		string retVal = string.Format("{0}DECLARE @ErrMsg nvarchar(4000) = '{1}:', @ErrSeverity int = 16{2}", r+t, ProcName, r + r);
+
+	    retVal += string.Format("{0} SELECT {1}", r+t, r);
+        string seperator = string.Empty;
+        foreach (Microsoft.SqlServer.Management.Smo.Column column in tbl.Columns) {
+			if( column.DataType.ToString() != "image" && column.DataType.ToString() != "ntext" ){
+				if (column.InPrimaryKey) {
+					retVal += string.Format("{0}{1}[{2}].[{3}] {4} ", t + t + t, seperator, tbl.Name, column.Name, r);
+				} else {
+					retVal += string.Format("{0}{1}[{2}].[{3}] {4} ", t + t + t, seperator, tbl.Name, column.Name, r);
+				}
+				seperator = ", ";
+			}
+        }
+
+        retVal += string.Format("{0} FROM [{1}].[{2}] {3}", t, tbl.Schema, tbl.Name, r);
+        retVal += string.Format("{0} WHERE {1}", t, r);
+        seperator = string.Empty;
+        foreach (Microsoft.SqlServer.Management.Smo.Column column in tbl.Columns) {
+			if( column.DataType.ToString() != "image" && column.DataType.ToString() != "ntext"  ){
+				retVal += string.Format("{0}{1} ( [{2}].[{3}] = @{3} OR @{3} IS NULL ) {4} ", t + t + t, seperator, tbl.Name, column.Name, r);
+				seperator = "AND ";
+			}
+        }
+
+		retVal += r;
+
+		retVal +=  SetNoRecordsFoundHandler(ProcName);
+
+
+        retVal += string.Format("SET  @{0}=SCOPE_IDENTITY(){1}", PrimaryKeyColName, r);
+
+        return retVal; 
+    }
+
+
+    public static string MakeDelete(Microsoft.SqlServer.Management.Smo.Table tbl, string ProcName )
+    {
+        string retVal = BeginTransction();
+
+	    retVal += string.Format("{0}DECLARE @ErrMsg nvarchar(4000) = '{1}:', @ErrSeverity int = 16{2}", r+t, ProcName, r + r);
+
+        retVal += string.Format("{0} IF @delete = 1 {1}", t + t, r);
+        retVal += string.Format("{0} BEGIN {1}", t + t, r);
+        retVal += string.Format("{0} DELETE FROM [{1}].[{2}] WHERE ( {3}= @{3} ) {4}", t,tbl.Schema, tbl.Name, PrimaryKeyColName, r);
+        retVal += string.Format("{0} END {1}", t + t, r);
+
+		retVal += SetNoRecordsFoundHandler(ProcName);
+
+		retVal += EndTransction();
+
+        return retVal;
+    }
+
+    public static string MakeInsert(Microsoft.SqlServer.Management.Smo.Table tbl, string ProcName )    {
+        string retVal = BeginTransction();
+
+	    retVal += string.Format("{0}DECLARE @ErrMsg nvarchar(4000) = '{1}:', @ErrSeverity int = 16{2}", r+t, ProcName, r + r);
+
+
+        retVal += string.Format("{0} INSERT INTO [{1}].[{2}] ( {3}", t + t, tbl.Schema, tbl.Name, r);
+
+        string seperator = string.Empty;
+        foreach (Microsoft.SqlServer.Management.Smo.Column column in tbl.Columns) {
+			if( column.DataType.ToString() != "image" && column.DataType.ToString() != "ntext" && (! column.Computed )){
+				if (! column.InPrimaryKey ) {
+					retVal += string.Format("{0}{1}{2} {3}", t+t+t, seperator, column.Name, r);
+					seperator = ", ";
+				}
+			}
+        }
+        retVal += string.Format("{0} ) {1}", t + t, r);
+        seperator = string.Empty;
+        retVal += string.Format("{0} VALUES ( {1}", t + t, r);
+        foreach (Microsoft.SqlServer.Management.Smo.Column column in tbl.Columns){
+			if( column.DataType.ToString() != "image" && column.DataType.ToString() != "ntext" && (! column.Computed )){
+				if (! column.InPrimaryKey ) {
+					retVal += string.Format("{0}{1} @{2} {3}", t + t + t, seperator, column.Name, r);
+					seperator = ", ";
+				}
+			}
+        }
+        retVal += string.Format("{0} ) {1}", t + t, r);
+
+		retVal += r;
+        retVal += string.Format("{0}{0}SET  @{1}=SCOPE_IDENTITY(){2}", t, PrimaryKeyColName, r);
+		retVal += r;
+		retVal += EndTransction();
+
+        return retVal;
+    }
+
+    public static string MakeUpdate(Microsoft.SqlServer.Management.Smo.Table tbl, string ProcName  ) {
+
+
+        string retVal = BeginTransction();
+        string comma = string.Empty;
+
+	    retVal += string.Format("{0}DECLARE @ErrMsg nvarchar(4000) = '{1}:', @ErrSeverity int = 16{2}", r+t, ProcName, r + r);
+
+        retVal += string.Format("{0} UPDATE [{1}].[{2}] {3}", t + t, tbl.Schema, tbl.Name, r);
+        retVal += string.Format("{0} SET {1}{0}", t, r);
+
+        foreach (Microsoft.SqlServer.Management.Smo.Column column in tbl.Columns) {
+			if( column.DataType.ToString() != "image" && column.DataType.ToString() != "ntext" && (! column.Computed )){
+				if (! column.InPrimaryKey) {
+					retVal += string.Format("{0}{3} {1} = CASE {2}{0} WHEN NOT @{1} IS NULL THEN @{1} {2}{0} ELSE {1} {2}{0} END {2}", t, column.Name, r, comma);
+					comma = ", ";
+				}
+			}
+	    }
+        retVal += string.Format("{0} WHERE {1} = @{1} {2}", t, PrimaryKeyColName, r);
+
+		retVal += SetNoRecordsFoundHandler(ProcName);
+
+		retVal += EndTransction();
+        return retVal;
+    }
+
+	public static string SetNoRecordsFoundHandler( string ProcName  ){
+		string retVal = string.Format("{0}IF @@ROWCOUNT <= 0 {1}", t, r );
+		retVal += string.Format("{0}BEGIN{1}", t, r );
+		retVal += string.Format("{0}SET @ErrMsg += 'No Records Found Matching the Search Criteria'{1}", t+t, r );
+		retVal += string.Format("{0}RAISERROR ( @ErrMsg, @ErrSeverity, 1 );{1}", t+t, r );
+		retVal += string.Format("{0}END{1}", t, r + r );
+        return retVal;
+	}
+	
+	public static string BeginTransction(){
+	    string retVal = string.Format("BEGIN TRY {1}", t,  r);
+	    retVal += string.Format("BEGIN TRANSACTION {1}{1}", t,  r);
+        return retVal;
+	}
+
+	public static string EndTransction(){
+	    string retVal = string.Format("COMMIT {1}", t,  r);
+	    retVal += string.Format("END TRY {1}", t,  r);
+	    retVal += string.Format("BEGIN CATCH {1}", t,  r);
+	    retVal += string.Format("{0}{0}IF @@TRANCOUNT > 0 ROLLBACK {1}", t,  r);
+	    //retVal += string.Format("{0}{0}DECLARE @ErrMsg nvarchar(4000), @ErrSeverity int {1}", t,  r);
+	    retVal += string.Format("{0}{0}SELECT @ErrMsg = {1}", t,  r);
+	    retVal += string.Format("{0}{0}{0}'Message: '+ ERROR_MESSAGE() {1}", t,  r);
+	    retVal += string.Format("{0}{0}{0}+ ', Error ' + CONVERT(VARCHAR(50), ERROR_NUMBER()) {1}", t,  r);
+	    retVal += string.Format("{0}{0}{0}+ ', Severity ' + CONVERT(VARCHAR(5), ERROR_SEVERITY()) {1}", t,  r);
+	    retVal += string.Format("{0}{0}{0}+ ', State ' + CONVERT(VARCHAR(5), ERROR_STATE()) {1}", t,  r);
+	    retVal += string.Format("{0}{0}{0}+ ', Line ' + CONVERT(VARCHAR(5), ERROR_LINE()); {1}", t,  r);
+	    retVal += string.Format("{0}{0}SELECT @ErrSeverity = ERROR_SEVERITY() {1}", t,  r);
+	    retVal += string.Format("{0}{0}RAISERROR(@ErrMsg, @ErrSeverity, 1) {1}", t,  r);
+
+	    retVal += string.Format("END CATCH {1}", t,  r);
+        return retVal;
+	}
+
+    public enum ProcedureType { 
+        Get
+        , Set
+        , Create
+        , Update
+        , Delete
+    }
+
+    private static string FormatDataType(Microsoft.SqlServer.Management.Smo.Column col) {
+        string retVal = string.Empty;
+
+        switch (col.DataType.ToString()) {
+            case "xml":
+                retVal = string.Format("{0}", col.DataType);
+                break;
+            case "varcharmax":
+                retVal = string.Format("{0}", col.DataType);
+                break;
+            case "nvarcharmax":
+                retVal = string.Format("{0}", col.DataType);
+                break;
+            case "uniqueidentifier":
+                retVal = string.Format("{0}", col.DataType);
+                break;
+            case "bit":
+                retVal = string.Format("{0}", col.DataType);
+                break;
+            case "datetime":
+                retVal = string.Format("{0}", col.DataType);
+                break;
+            case "text":
+                retVal = string.Format("{0}", col.DataType);
+                break;
+            case "ntext":
+                retVal = string.Format("{0}", col.DataType);
+                break;
+            case "money":
+                retVal = string.Format("{0}", col.DataType);
+                break;
+            case "float":
+                retVal = string.Format("{0}", col.DataType);
+                break;
+            case "real":
+                retVal = string.Format("{0}", col.DataType);
+                break;
+            case "int":
+                retVal = string.Format("{0}", col.DataType);
+                break;
+            case "bigint":
+                retVal = string.Format("{0}", col.DataType);
+                break;
+            case "char":
+                retVal = string.Format("{0} ({1})", col.DataType, FormatLength(col.DataType.MaximumLength));
+                break;
+            case "nchar":
+                retVal = string.Format("{0} ({1})", col.DataType, FormatLength(col.DataType.MaximumLength));
+                break;
+            case "varchar":
+                retVal = string.Format("{0} ({1})", col.DataType, FormatLength(col.DataType.MaximumLength));
+                break;
+            case "nvarchar":
+                retVal = string.Format("{0} ({1})", col.DataType, FormatLength(col.DataType.MaximumLength));
+                break;
+            case "binary":
+                retVal = string.Format("{0} ({1})", col.DataType, FormatLength(col.DataType.MaximumLength));
+                break;
+            case "varbinary":
+                retVal = string.Format("{0} ({1})", col.DataType, FormatLength(col.DataType.MaximumLength));
+                break;
+            case "decimal":
+                retVal = string.Format("{0} ({1},{2})", col.DataType, col.DataType.NumericPrecision, col.DataType.NumericScale);
+                break; 
+            //case "image":
+            //    retVal = string.Format("{0}", col.DataType);
+            //    break;
+
+        }
+
+        return retVal; 
+    
+    }    
+	 private static string FormatLength(int val){
+		if(val == -1){
+		return "MAX";
+		}
+		return (string) val.ToString();
+	}
+}
+#>
